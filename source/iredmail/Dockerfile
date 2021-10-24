@@ -2,22 +2,21 @@
 FROM lianshufeng/maven as build
 MAINTAINER lianshufeng <251708339@qq.com>
 
-ARG GIT_URL="https://github.com/lianshufeng/docker_iredmail_api.git"
-ARG GIT_NAME="Jrebel"
+
 ARG FILE_NAME="iredapi-0.0.1-SNAPSHOT.jar"
 ARG JAR_FILE="/opt/jar"
 
+# 拷贝源码
+RUN mkdir /tmp/source
+Add ./* /tmp/source
 
 #下载源码
 RUN set -xe \
-	&& yum install -y git \
 	&& source /etc/profile \
-	&& cd /tmp/ \
-	&& git clone $GIT_URL \
-	&& cd /tmp/$GIT_NAME \
+	&& cd /tmp/source \
 	&& mvn package \
 	&& mkdir -p $JAR_FILE \
-	&& cp /tmp/$GIT_NAME/target/$FILE_NAME $JAR_FILE/$FILE_NAME \
+	&& cp /tmp/source/target/$FILE_NAME $JAR_FILE/$FILE_NAME \
 	
 	#刷新环境变量
 	&& source /etc/profile 
@@ -25,7 +24,7 @@ RUN set -xe \
 
 #运行环境
 FROM lianshufeng/springboot
-ARG FILE_NAME="jrebel-0.0.1-SNAPSHOT.jar"
+ARG FILE_NAME="iredapi-0.0.1-SNAPSHOT.jar"
 ARG JAR_FILE="/opt/jar"
 COPY --from=build $JAR_FILE/$FILE_NAME $JAR_FILE/$FILE_NAME 
 WORKDIR $JAR_FILE
