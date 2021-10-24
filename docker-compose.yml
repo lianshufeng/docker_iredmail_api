@@ -1,0 +1,14 @@
+version: "3"
+
+services:
+  springboot:
+    build:
+      context: ./source/iredmail
+      dockerfile: Dockerfile
+    image: lianshufeng/ired_api
+    ports:
+      - "8080:8080"
+    working_dir: /opt/jar
+    container_name: ired_api
+    restart: always
+   
