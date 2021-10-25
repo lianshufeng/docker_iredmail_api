@@ -14,8 +14,6 @@ Add ./ /tmp/source
 RUN set -xe \
 	&& source /etc/profile \
 	&& cd /tmp/source \
-	&& pwd \
-	&& ls \
 	&& mvn package \
 	&& mkdir -p $JAR_FILE \
 	&& cp /tmp/source/target/$FILE_NAME $JAR_FILE/$FILE_NAME \
