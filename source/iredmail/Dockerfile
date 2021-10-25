@@ -8,7 +8,7 @@ ARG JAR_FILE="/opt/jar"
 
 # 拷贝源码
 RUN mkdir /tmp/source
-Add ./* /tmp/source
+Add ./ /tmp/source
 
 #下载源码
 RUN set -xe \
