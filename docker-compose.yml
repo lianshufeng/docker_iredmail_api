@@ -3,7 +3,7 @@ version: "3"
 services:
   springboot:
     build:
-      context: ./source/iredmail
+      context: ./iredmail
       dockerfile: Dockerfile
     image: lianshufeng/ired_api
     ports:
