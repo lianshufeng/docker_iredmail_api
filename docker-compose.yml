@@ -5,10 +5,10 @@ services:
     build:
       context: ./iredmail
       dockerfile: Dockerfile
-    image: lianshufeng/ired_api
+    image: lianshufeng/iredmail_api
     ports:
       - "8080:8080"
     working_dir: /opt/jar
-    container_name: ired_api
+    container_name: iredmail_api
     restart: always
    
