@@ -17,6 +17,9 @@ public class IredConf {
     //主机名
     private String host;
 
+    //域名
+    private String domain;
+
     private String masterUsername = "postmaster";
 
     private String masterPassword;

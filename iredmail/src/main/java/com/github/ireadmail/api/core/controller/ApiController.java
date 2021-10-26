@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.CookieManager;
+
 @RequestMapping("api")
 @RestController
 public class ApiController {
@@ -18,10 +20,16 @@ public class ApiController {
      *
      * @return
      */
-    @RequestMapping("createMail")
-    public ResultContent create(String userName) {
+    @RequestMapping("add")
+    public ResultContent create(String username) {
+        CookieManager cookieManager = apiHelper.login();
+        return ResultContent.build(this.apiHelper.addUser(cookieManager, username));
+    }
 
-        return ResultContent.build(true);
+    @RequestMapping("del")
+    public ResultContent del(String username) {
+        CookieManager cookieManager = apiHelper.login();
+        return ResultContent.build(this.apiHelper.delUser(cookieManager, username));
     }
 
 
