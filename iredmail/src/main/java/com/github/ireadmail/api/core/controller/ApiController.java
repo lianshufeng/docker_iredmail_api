@@ -21,7 +21,7 @@ public class ApiController {
     @RequestMapping("createMail")
     public ResultContent create(String userName) {
 
-        return null;
+        return ResultContent.build(true);
     }
 
 
