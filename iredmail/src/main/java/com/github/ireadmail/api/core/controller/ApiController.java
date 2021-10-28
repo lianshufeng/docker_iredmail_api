@@ -35,7 +35,8 @@ public class ApiController {
 
     @RequestMapping("receive")
     public ResultContent receive(String username) {
-        return ResultContent.build(true, this.apiHelper.receive(username));
+        Object ret = this.apiHelper.receive(username);
+        return ResultContent.build(ret == null ? false : true, ret);
     }
 
 }

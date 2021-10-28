@@ -20,6 +20,8 @@ public class IredConf {
     //域名
     private String domain;
 
+    private String pop3Host;
+
     private String masterUsername = "postmaster";
 
     private String masterPassword;

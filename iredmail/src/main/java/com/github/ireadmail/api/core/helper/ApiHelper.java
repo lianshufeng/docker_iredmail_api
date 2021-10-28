@@ -2,14 +2,14 @@ package com.github.ireadmail.api.core.helper;
 
 import com.github.ireadmail.api.core.conf.IredConf;
 import com.github.ireadmail.api.core.util.TextUtil;
-import com.sun.mail.util.MailSSLSocketFactory;
+import lombok.Cleanup;
 import lombok.SneakyThrows;
-import org.apache.catalina.Store;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.integration.mail.MailReceiver;
-import org.springframework.integration.mail.Pop3MailReceiver;
 import org.springframework.stereotype.Component;
 
+import javax.mail.*;
+import javax.mail.internet.MimeMessage;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.URI;
@@ -20,6 +20,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.Charset;
 import java.util.Properties;
 
+@Slf4j
 @Component
 public class ApiHelper {
 
@@ -37,27 +38,80 @@ public class ApiHelper {
 //        this.cache.cleanUp();
 //    }
 
+
+    @SneakyThrows
+    public static void getMailTextContent(Part part, StringBuffer content) {
+        //如果是文本类型的附件，通过getContent方法可以取到文本内容，但这不是我们需要的结果，所以在这里要做判断
+        boolean isContainTextAttach = part.getContentType().indexOf("name") > 0;
+        if (part.isMimeType("text/*") && !isContainTextAttach) {
+            content.append(part.getContent().toString());
+        } else if (part.isMimeType("message/rfc822")) {
+            getMailTextContent((Part) part.getContent(), content);
+        } else if (part.isMimeType("multipart/*")) {
+            Multipart multipart = (Multipart) part.getContent();
+            int partCount = multipart.getCount();
+            for (int i = 0; i < partCount; i++) {
+                BodyPart bodyPart = multipart.getBodyPart(i);
+                getMailTextContent(bodyPart, content);
+            }
+        }
+    }
+
+    /**
+     * 解析邮件
+     *
+     * @param messages 要解析的邮件列表
+     */
+    @SneakyThrows
+    public static void parseMessage(Message... messages) {
+        if (messages == null || messages.length < 1)
+            throw new MessagingException("未找到要解析的邮件!");
+
+        // 解析所有邮件
+        for (int i = 0, count = messages.length; i < count; i++) {
+            MimeMessage msg = (MimeMessage) messages[i];
+            log.info("------------------解析第" + msg.getMessageNumber() + "封邮件-------------------- ");
+            StringBuffer content = new StringBuffer(30);
+            getMailTextContent(msg, content);
+            log.info("邮件正文：" + (content.length() > 100 ? content.substring(0, 100) + "..." : content));
+            System.out.println("------------------第" + msg.getMessageNumber() + "封邮件解析结束-------------------- ");
+        }
+    }
+
     @SneakyThrows
     public Object receive(String username) {
+        String account = username + "@" + this.iredConf.getDomain();
 
-//        String host, int port, String username, String password
 
-        Pop3MailReceiver receiver = new Pop3MailReceiver(
-                this.iredConf.getHost(),
-                110,
-                username,
-                this.iredConf.getDefaultPassword()
-        );
+        Properties props = new Properties();
+        props.setProperty("mail.store.protocol", "pop3");        // 协议
+        props.setProperty("mail.pop3.port", "110");                // 端口
+        props.setProperty("mail.pop3.host", this.iredConf.getPop3Host());    // pop3服务器
 
-        MailSSLSocketFactory sf = new MailSSLSocketFactory();
-        sf.setTrustAllHosts(true);
-        Properties mailProperties = new Properties();
-        mailProperties.put("mail.pop3.ssl.enable", "true");
-        mailProperties.put("mail.pop3.ssl.socketFactory", sf);
+        // 创建Session实例对象
+        Session session = Session.getInstance(props);
+        @Cleanup Store store = session.getStore("pop3");
+        store.connect(account, this.iredConf.getDefaultPassword());
 
-        receiver.setJavaMailProperties(mailProperties);
+        // 获得收件箱
+        Folder folder = store.getFolder("INBOX");
+        folder.open(Folder.READ_WRITE);    //打开收件箱
 
-        return receiver.receive();
+        // 由于POP3协议无法获知邮件的状态,所以getUnreadMessageCount得到的是收件箱的邮件总数
+        log.info("未读邮件数: {}", folder.getUnreadMessageCount());
+        // 由于POP3协议无法获知邮件的状态,所以下面得到的结果始终都是为0
+        log.info("删除邮件数: {}", folder.getDeletedMessageCount());
+        log.info("新邮件: {}", folder.getNewMessageCount());
+        // 获得收件箱中的邮件总数
+        log.info("邮件总数: {}", folder.getMessageCount());
+        // 得到收件箱中的所有邮件,并解析
+        Message[] messages = folder.getMessages();
+        parseMessage(messages);
+
+        //释放资源
+        folder.close(true);
+
+        return null;
     }
 
     /**
