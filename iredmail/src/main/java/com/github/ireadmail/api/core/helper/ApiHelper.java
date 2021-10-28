@@ -18,7 +18,12 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Component
@@ -40,19 +45,19 @@ public class ApiHelper {
 
 
     @SneakyThrows
-    public static void getMailTextContent(Part part, StringBuffer content) {
+    private static void getMailTextContent(Part part, List<String> contents) {
         //如果是文本类型的附件，通过getContent方法可以取到文本内容，但这不是我们需要的结果，所以在这里要做判断
         boolean isContainTextAttach = part.getContentType().indexOf("name") > 0;
         if (part.isMimeType("text/*") && !isContainTextAttach) {
-            content.append(part.getContent().toString());
+            contents.add(part.getContent().toString());
         } else if (part.isMimeType("message/rfc822")) {
-            getMailTextContent((Part) part.getContent(), content);
+            getMailTextContent((Part) part.getContent(), contents);
         } else if (part.isMimeType("multipart/*")) {
             Multipart multipart = (Multipart) part.getContent();
             int partCount = multipart.getCount();
             for (int i = 0; i < partCount; i++) {
                 BodyPart bodyPart = multipart.getBodyPart(i);
-                getMailTextContent(bodyPart, content);
+                getMailTextContent(bodyPart, contents);
             }
         }
     }
@@ -63,19 +68,24 @@ public class ApiHelper {
      * @param messages 要解析的邮件列表
      */
     @SneakyThrows
-    public static void parseMessage(Message... messages) {
-        if (messages == null || messages.length < 1)
-            throw new MessagingException("未找到要解析的邮件!");
-
-        // 解析所有邮件
-        for (int i = 0, count = messages.length; i < count; i++) {
-            MimeMessage msg = (MimeMessage) messages[i];
-            log.info("------------------解析第" + msg.getMessageNumber() + "封邮件-------------------- ");
-            StringBuffer content = new StringBuffer(30);
-            getMailTextContent(msg, content);
-            log.info("邮件正文：" + (content.length() > 100 ? content.substring(0, 100) + "..." : content));
-            System.out.println("------------------第" + msg.getMessageNumber() + "封邮件解析结束-------------------- ");
-        }
+    public static List parseMessage(Message... messages) {
+        List ret = Stream.of(messages).map((it) -> {
+            try {
+                it.setFlag(Flags.Flag.DELETED, true);
+                MimeMessage msg = (MimeMessage) it;
+                log.info("------------------解析第" + msg.getMessageNumber() + "封邮件-------------------- ");
+                String subject = msg.getSubject();
+                List<String> contents = new ArrayList<>();
+                getMailTextContent(msg, contents);
+                return Map.of("subject", subject,
+                        "contents", contents
+                );
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }).collect(Collectors.toList());
+        return ret;
     }
 
     @SneakyThrows
@@ -106,12 +116,11 @@ public class ApiHelper {
         log.info("邮件总数: {}", folder.getMessageCount());
         // 得到收件箱中的所有邮件,并解析
         Message[] messages = folder.getMessages();
-        parseMessage(messages);
+        List contents = parseMessage(messages);
 
         //释放资源
         folder.close(true);
-
-        return null;
+        return contents;
     }
 
     /**

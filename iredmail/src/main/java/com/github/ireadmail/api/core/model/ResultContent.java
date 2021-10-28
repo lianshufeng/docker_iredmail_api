@@ -18,8 +18,6 @@ public class ResultContent {
     private Object content;
 
 
-    private long time = System.currentTimeMillis();
-
     public static ResultContent build(boolean success) {
         return ResultContent.builder().success(success).build();
     }
