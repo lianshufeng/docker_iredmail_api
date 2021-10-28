@@ -2,8 +2,12 @@ package com.github.ireadmail.api.core.helper;
 
 import com.github.ireadmail.api.core.conf.IredConf;
 import com.github.ireadmail.api.core.util.TextUtil;
+import com.sun.mail.util.MailSSLSocketFactory;
 import lombok.SneakyThrows;
+import org.apache.catalina.Store;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.integration.mail.MailReceiver;
+import org.springframework.integration.mail.Pop3MailReceiver;
 import org.springframework.stereotype.Component;
 
 import java.net.CookieManager;
@@ -14,6 +18,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.Charset;
+import java.util.Properties;
 
 @Component
 public class ApiHelper {
@@ -32,6 +37,28 @@ public class ApiHelper {
 //        this.cache.cleanUp();
 //    }
 
+    @SneakyThrows
+    public Object receive(String username) {
+
+//        String host, int port, String username, String password
+
+        Pop3MailReceiver receiver = new Pop3MailReceiver(
+                this.iredConf.getHost(),
+                110,
+                username,
+                this.iredConf.getDefaultPassword()
+        );
+
+        MailSSLSocketFactory sf = new MailSSLSocketFactory();
+        sf.setTrustAllHosts(true);
+        Properties mailProperties = new Properties();
+        mailProperties.put("mail.pop3.ssl.enable", "true");
+        mailProperties.put("mail.pop3.ssl.socketFactory", sf);
+
+        receiver.setJavaMailProperties(mailProperties);
+
+        return receiver.receive();
+    }
 
     /**
      * 登陆
@@ -90,6 +117,7 @@ public class ApiHelper {
         return true;
     }
 
+
     @SneakyThrows
     public boolean delUser(CookieManager cookieManager, String username) {
         String token = csrf_token(cookieManager);
@@ -99,7 +127,7 @@ public class ApiHelper {
                 "csrf_token=%s&mail=%s&cur_page=1&action=delete&keep_mailbox_days=1",
                 token,
                 URLEncoder.encode(mail, "UTF-8")
-                );
+        );
 
         HttpClient httpClient = HttpClient.newBuilder()
                 .cookieHandler(cookieManager)
