@@ -29,4 +29,8 @@ public class IredConf {
     //默认密码
     private String defaultPassword = "Aa0!Aa0!";
 
+
+    //自动删除时间
+    private long autoDelTime = 1 * 60 * 1000;
+
 }
