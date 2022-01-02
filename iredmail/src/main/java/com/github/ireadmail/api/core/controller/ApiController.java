@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.net.CookieManager;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @RequestMapping("api")
 @RestController
@@ -22,12 +25,12 @@ public class ApiController {
     @Autowired
     private IredConf iredConf;
 
-    private Timer timer = new Timer();
+    private ScheduledExecutorService executors = Executors.newScheduledThreadPool(10);
 
     @Autowired
     private void init(ApplicationContext applicationContext) {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            timer.cancel();
+            executors.shutdownNow();
         }));
     }
 
@@ -41,13 +44,9 @@ public class ApiController {
         CookieManager cookieManager = apiHelper.login();
         boolean success = this.apiHelper.addUser(cookieManager, username);
         if (success) {
-            this.timer.schedule(new TimerTask() {
-                                    @Override
-                                    public void run() {
-                                        ApiController.this.del(username);
-                                    }
-                                }, this.iredConf.getAutoDelTime()
-            );
+            executors.scheduleAtFixedRate(() -> {
+                ApiController.this.del(username);
+            }, this.iredConf.getAutoDelTime(), this.iredConf.getAutoDelTime(), TimeUnit.MILLISECONDS);
         }
         return ResultContent.build(success);
     }
