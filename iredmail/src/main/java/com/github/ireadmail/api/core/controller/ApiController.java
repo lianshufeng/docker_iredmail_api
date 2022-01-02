@@ -1,13 +1,16 @@
 package com.github.ireadmail.api.core.controller;
 
+import com.github.ireadmail.api.core.conf.BlackListConf;
 import com.github.ireadmail.api.core.conf.IredConf;
 import com.github.ireadmail.api.core.helper.ApiHelper;
 import com.github.ireadmail.api.core.model.ResultContent;
+import com.github.ireadmail.api.core.util.IPUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpServletRequest;
 import java.net.CookieManager;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -25,6 +28,10 @@ public class ApiController {
     @Autowired
     private IredConf iredConf;
 
+    @Autowired
+    private BlackListConf blackListConf;
+
+
     private ScheduledExecutorService executors = Executors.newScheduledThreadPool(10);
 
     @Autowired
@@ -40,7 +47,14 @@ public class ApiController {
      * @return
      */
     @RequestMapping("add")
-    public ResultContent create(final String username) {
+    public ResultContent create(HttpServletRequest request, final String username) {
+        String ip = IPUtil.getRemoteIp(request);
+
+        //黑名单
+        if (blackListConf.getIp().contains(ip)) {
+            return ResultContent.build(false);
+        }
+
         CookieManager cookieManager = apiHelper.login();
         boolean success = this.apiHelper.addUser(cookieManager, username);
         if (success) {
