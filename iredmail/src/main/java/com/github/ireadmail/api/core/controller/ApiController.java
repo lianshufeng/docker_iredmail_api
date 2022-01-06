@@ -5,21 +5,31 @@ import com.github.ireadmail.api.core.conf.IredConf;
 import com.github.ireadmail.api.core.helper.ApiHelper;
 import com.github.ireadmail.api.core.model.ResultContent;
 import com.github.ireadmail.api.core.util.IPUtil;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import java.net.CookieManager;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @RequestMapping("api")
 @RestController
+@EnableScheduling
 public class ApiController {
 
     @Autowired
@@ -33,6 +43,17 @@ public class ApiController {
 
 
     private ScheduledExecutorService executors = Executors.newScheduledThreadPool(10);
+
+
+    final private Map<String, Integer> accessAddUserIpCache = new ConcurrentHashMap<>();
+
+
+    //表示每天8时30分0秒执行
+    @Scheduled(cron = "0 0 4 ? * *")
+    public void cleanAddUserIpCache() {
+        accessAddUserIpCache.clear();
+        log.info("clean add cache");
+    }
 
     @Autowired
     private void init(ApplicationContext applicationContext) {
@@ -48,34 +69,54 @@ public class ApiController {
      */
     @RequestMapping("add")
     public ResultContent create(HttpServletRequest request, final String username) {
-        String ip = IPUtil.getRemoteIp(request);
+        final String ip = IPUtil.getRemoteIp(request);
 
         //黑名单
         if (blackListConf.getIp().contains(ip)) {
             return ResultContent.build(false);
         }
 
+        //取出当前ip注册次数
+        final Integer counter = this.accessAddUserIpCache.getOrDefault(ip, 1);
+        if (counter > this.blackListConf.getMaxAddCountFromDay()) {
+            log.error("超过最大次数 : {} , {} ", ip, counter);
+            return ResultContent.build(false);
+        }
+        this.accessAddUserIpCache.put(ip, counter + 1);
+
+
         CookieManager cookieManager = apiHelper.login();
         boolean success = this.apiHelper.addUser(cookieManager, username);
         if (success) {
-            executors.scheduleAtFixedRate(() -> {
+            executors.schedule(() -> {
                 ApiController.this.del(username);
-            }, this.iredConf.getAutoDelTime(), this.iredConf.getAutoDelTime(), TimeUnit.MILLISECONDS);
+            }, this.iredConf.getAutoDelTime(), TimeUnit.MILLISECONDS);
         }
         return ResultContent.build(success);
     }
 
     @RequestMapping("del")
     public ResultContent del(String username) {
+        log.info("remove {}", username);
         CookieManager cookieManager = apiHelper.login();
         return ResultContent.build(this.apiHelper.delUser(cookieManager, username));
     }
 
 
     @RequestMapping("receive")
-    public ResultContent receive(String username) {
+    public ResultContent receive(HttpServletRequest request, String username) {
+
+        //取出当前ip注册次数
+        final String ip = IPUtil.getRemoteIp(request);
+        final Integer counter = this.accessAddUserIpCache.getOrDefault(ip, 1);
+        if (counter > this.blackListConf.getMaxAddCountFromDay()) {
+            log.error("超过最大次数 : {} , {} ", ip, counter);
+            return ResultContent.build(false);
+        }
+
         Object ret = this.apiHelper.receive(username);
         return ResultContent.build(ret == null ? false : true, ret);
     }
+
 
 }

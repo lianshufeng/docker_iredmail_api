@@ -17,4 +17,7 @@ public class BlackListConf {
 
     private Vector<String> ip;
 
+    //每日ip注册最大数量
+    private int maxAddCountFromDay = 5;
+
 }
