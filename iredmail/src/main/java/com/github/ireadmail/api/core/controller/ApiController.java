@@ -109,7 +109,7 @@ public class ApiController {
         //取出当前ip注册次数
         final String ip = IPUtil.getRemoteIp(request);
         final Integer counter = this.accessAddUserIpCache.getOrDefault(ip, 1);
-        if (counter > this.blackListConf.getMaxAddCountFromDay() && isMasterPassword) {
+        if (counter > this.blackListConf.getMaxAddCountFromDay() && !isMasterPassword) {
             log.error("超过最大次数 : {} , {} ", ip, counter);
             return ResultContent.build(false);
         }

@@ -3,3 +3,10 @@ POST http://127.0.0.1:8080/api/add
 Content-Type: application/x-www-form-urlencoded
 
 username=test001
+
+
+### 接受数据
+POST http://127.0.0.1:8080/api/receive
+Content-Type: application/x-www-form-urlencoded
+
+username=79cac47c15c74581b4a309d22d43949a
