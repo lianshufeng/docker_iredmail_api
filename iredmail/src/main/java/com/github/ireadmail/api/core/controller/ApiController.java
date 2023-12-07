@@ -102,12 +102,14 @@ public class ApiController {
 
 
     @RequestMapping("receive")
-    public ResultContent receive(HttpServletRequest request, String username) {
+    public ResultContent receive(HttpServletRequest request, final String username, final String masterPassword) {
+        //超级密码不进入黑明白
+        boolean isMasterPassword = this.iredConf.getMasterPassword().equals(masterPassword);
 
         //取出当前ip注册次数
         final String ip = IPUtil.getRemoteIp(request);
         final Integer counter = this.accessAddUserIpCache.getOrDefault(ip, 1);
-        if (counter > this.blackListConf.getMaxAddCountFromDay()) {
+        if (counter > this.blackListConf.getMaxAddCountFromDay() && isMasterPassword) {
             log.error("超过最大次数 : {} , {} ", ip, counter);
             return ResultContent.build(false);
         }
