@@ -5,22 +5,18 @@ import com.github.ireadmail.api.core.conf.IredConf;
 import com.github.ireadmail.api.core.helper.ApiHelper;
 import com.github.ireadmail.api.core.model.ResultContent;
 import com.github.ireadmail.api.core.util.IPUtil;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.servlet.http.HttpServletRequest;
 import java.net.CookieManager;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -68,8 +64,10 @@ public class ApiController {
      * @return
      */
     @RequestMapping("add")
-    public ResultContent create(HttpServletRequest request, final String username) {
+    public ResultContent create(HttpServletRequest request, final String username, final String masterPassword, final Long autoDelTime) {
         final String ip = IPUtil.getRemoteIp(request);
+
+        boolean isMasterPassword = this.iredConf.getMasterPassword().equals(masterPassword);
 
         //黑名单
         if (blackListConf.getIp().contains(ip)) {
@@ -78,7 +76,7 @@ public class ApiController {
 
         //取出当前ip注册次数
         final Integer counter = this.accessAddUserIpCache.getOrDefault(ip, 1);
-        if (counter > this.blackListConf.getMaxAddCountFromDay()) {
+        if (counter > this.blackListConf.getMaxAddCountFromDay() && !isMasterPassword) {
             log.error("超过最大次数 : {} , {} ", ip, counter);
             return ResultContent.build(false);
         }
@@ -90,7 +88,7 @@ public class ApiController {
         if (success) {
             executors.schedule(() -> {
                 ApiController.this.del(username);
-            }, this.iredConf.getAutoDelTime(), TimeUnit.MILLISECONDS);
+            }, autoDelTime != null ? autoDelTime : this.iredConf.getAutoDelTime(), TimeUnit.MILLISECONDS);
         }
         return ResultContent.build(success);
     }

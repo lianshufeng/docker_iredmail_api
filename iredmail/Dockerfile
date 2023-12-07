@@ -1,5 +1,5 @@
 #编译环境
-FROM lianshufeng/maven as build
+FROM lianshufeng/maven:jdk17 as build
 MAINTAINER lianshufeng <251708339@qq.com>
 
 
@@ -23,7 +23,7 @@ RUN set -xe \
 
 
 #运行环境
-FROM lianshufeng/springboot
+FROM lianshufeng/springboot:jdk17
 ARG FILE_NAME="iredapi-0.0.1-SNAPSHOT.jar"
 ARG JAR_FILE="/opt/jar"
 COPY --from=build $JAR_FILE/$FILE_NAME $JAR_FILE/$FILE_NAME 

@@ -2,14 +2,14 @@ package com.github.ireadmail.api.core.helper;
 
 import com.github.ireadmail.api.core.conf.IredConf;
 import com.github.ireadmail.api.core.util.TextUtil;
+import jakarta.mail.*;
+import jakarta.mail.internet.MimeMessage;
 import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import javax.mail.*;
-import javax.mail.internet.MimeMessage;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.URI;

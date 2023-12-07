@@ -1,6 +1,7 @@
 package com.github.ireadmail.api.core.util;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,7 +31,7 @@ public class IPUtil {
      * @return
      */
     public static String getRemoteIp(HttpServletRequest request) {
-        final Map<String,String> header = new HashMap();
+        final Map<String, String> header = new HashMap();
         Arrays.stream(headNames).forEach((name) -> {
             header.put(name, request.getHeader(name));
         });
@@ -43,7 +44,7 @@ public class IPUtil {
      *
      * @return
      */
-    public static String getRemoteIp(Map<String,String> headers, String defaultRemoteAddr) {
+    public static String getRemoteIp(Map<String, String> headers, String defaultRemoteAddr) {
         for (String name : headNames) {
             Object obj = headers.get(name);
             if (obj == null || "".equals(String.valueOf(obj))) {
